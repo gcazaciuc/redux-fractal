@@ -11,8 +11,8 @@ export const defaultReducer = (state = {}, action) => {
 const initialiseComponentState = (state, payload, componentKey) => {
     const { config, props } = payload;
     reducers[componentKey] = config.reducer || defaultReducer;
-    const initialState = typeof config.state === 'function' ?
-                            config.state(props) : config.state;
+    const initialState = typeof config.initialState === 'function' ?
+                            config.initialState(props) : config.initialState;
     const componentsState = state.componentsState;
     const newComponentsState = Object.assign({}, componentsState, { [componentKey]: initialState });
     return newComponentsState;
@@ -30,7 +30,7 @@ const updateSingleComponent = (oldComponentState, action, componentKey) => {
     }
     return oldComponentState;
 };
-/*eslint-disable */
+
 const updateComponentState = (state, action, componentKey) => {
     if (componentKey) {
         const updatedState = updateSingleComponent(state.componentsState[componentKey], action, componentKey);
@@ -44,7 +44,7 @@ const updateComponentState = (state, action, componentKey) => {
         return Object.assign({}, state, { componentsState: newState });
     }
 };
-/* eslint-enable */
+
 export default (state = { componentsState: {}, subscribersCount: {} }, action) => {
     const componentKey = action.meta && action.meta.componentKey;
     let subscribersCount = 0;

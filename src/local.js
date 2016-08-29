@@ -17,7 +17,7 @@ export default (Config) => (Component) => {
             };
             this.updateUI = (data) => this.localDispatch({ type: 'UPDATE_UI', payload: data });
             invariant(Config.key,
-                `You must supply a globally unique key to the component either as a function or string`);
+                `[redux-fractal] - You must supply a globally unique key to the component either as a function or string`);
             this.key = typeof Config.key === 'function' ?
                 Config.key(props, this.context.store.getState()) : Config.key;
             this.unsubscribe = null;
