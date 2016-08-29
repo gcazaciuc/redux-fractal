@@ -6,30 +6,30 @@ Provides the means to hold up local component state in redux state and to dispat
 It's easy to get starte using redux-fractal
 
 1. Add the local reducer to the redux store under the key 'local'
-    ```js
-        import { localReducer } from 'redux-fractal';
-        const store = createStore(combineReducers({
-            local: localReducer,
-            myotherReducer: myotherReducer
-        }))
-    ```
+```js
+    import { localReducer } from 'redux-fractal';
+    const store = createStore(combineReducers({
+        local: localReducer,
+        myotherReducer: myotherReducer
+    }))
+```
 2. Decorate the components that hold ui state( transient state, scoped to that very specific component ) with the 'local' higher order component:
-    ```js
-        import { local, defaultReducer, updateUI } from 'redux-fractal';
-        local({
-            initialState: {
-                filterTerm: '',
-                sortOrder: 'asc'
-            },
-            reducer: defaultReducer,
-            mapDispatchToProps: (dispatch) => ({
-                onFilter: (term) => dispatch(updateUI({ filterTerm: term })),
-                onSort: (order) => dispatch(updateUI({
-                    sortOrder: 'desc'
-                }))
-            })
-        })(Table)
-    ```
+```js
+    import { local, defaultReducer, updateUI } from 'redux-fractal';
+    local({
+        initialState: {
+            filterTerm: '',
+            sortOrder: 'asc'
+        },
+        reducer: defaultReducer,
+        mapDispatchToProps: (dispatch) => ({
+            onFilter: (term) => dispatch(updateUI({ filterTerm: term })),
+            onSort: (order) => dispatch(updateUI({
+                sortOrder: 'desc'
+            }))
+        })
+    })(Table)
+```
 
 The higher order component 'local' takes in the following params:
 
