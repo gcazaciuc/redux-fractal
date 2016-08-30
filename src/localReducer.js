@@ -1,5 +1,7 @@
 import * as UIActions from './actions.js';
-const reducers = {};
+const stores = {};
+const globalActions = {};
+
 export const defaultReducer = (state = {}, action) => {
     switch (action.type) {
         case 'UPDATE_UI':
@@ -9,44 +11,45 @@ export const defaultReducer = (state = {}, action) => {
     }
 };
 const initialiseComponentState = (state, payload, componentKey) => {
-    const { config, props } = payload;
-    reducers[componentKey] = config.reducer || defaultReducer;
-    const initialState = typeof config.initialState === 'function' ?
-                            config.initialState(props) : config.initialState;
-    const componentsState = state.componentsState;
-    const newComponentsState = Object.assign({}, componentsState, { [componentKey]: initialState });
+    const { config, props, store } = payload;
+    stores[componentKey] = store;
+    const defaultGlobalFilter = () => false;
+    globalActions[componentKey] = config.filterGlobalActions || defaultGlobalFilter;
+    const initialState = stores[componentKey].getState();
+    const newComponentsState = Object.assign({}, state.componentsState, { [componentKey]: initialState });
     return newComponentsState;
 };
 const destroyComponentState = (state, payload, componentKey) => {
     const newState = Object.assign({}, state);
     delete newState.componentsState[componentKey];
-    delete reducers[componentKey];
+    delete stores[componentKey];
     return newState.componentsState;
 };
 const updateSingleComponent = (oldComponentState, action, componentKey) => {
-    const reducer = reducers[componentKey];
-    if (reducer) {
-        return reducer(oldComponentState, action);
+    const store = stores[componentKey];
+    if (store) {
+        action.meta = Object.assign({}, action.meta, { currentComponentKey: componentKey });
+        store.originalDispatch(action);
+        // console.log('Updated '+componentKey+' for action'+action.type+' to state'+JSON.stringify(store.getState()));
+        return store.getState();
     }
     return oldComponentState;
 };
 
 const updateComponentState = (state, action, componentKey) => {
-    if (componentKey) {
-        const updatedState = updateSingleComponent(state.componentsState[componentKey], action, componentKey);
-        const newCompState = Object.assign({}, state.componentsState, { [componentKey]: updatedState });
-        return Object.assign({}, state, { componentsState: newCompState });
-    } else {
-        const newState = Object.keys(state.componentsState).reduce((stateAcc, k) => {
-            const updatedState = updateSingleComponent(state.componentsState[k], action, k);
-            return Object.assign({}, stateAcc, { [k]: updatedState });
-        }, {});
-        return Object.assign({}, state, { componentsState: newState });
-    }
+    const newState = Object.keys(state.componentsState).reduce((stateAcc, k) => {
+        const shouldUpdate = componentKey == k || (typeof globalActions[k] === 'function' && globalActions[k](action));
+        let updatedState = state.componentsState[k];
+        if (shouldUpdate) {
+            updatedState = updateSingleComponent(state.componentsState[k], action, k);
+        }
+        return Object.assign({}, stateAcc, { [k]: updatedState });
+    }, {});
+    return Object.assign({}, state, { componentsState: newState });
 };
 
 export default (state = { componentsState: {}, subscribersCount: {} }, action) => {
-    const componentKey = action.meta && action.meta.componentKey;
+    const componentKey = action.meta && action.meta.triggerComponentKey;
     let subscribersCount = 0;
     let newSubscribers = {};
     switch (action.type) {
