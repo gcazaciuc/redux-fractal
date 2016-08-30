@@ -1,15 +1,17 @@
 {
   "name": "redux-fractal",
   "version": "1.0.0",
-  "description": "A local component state management library using redux",
+  "description": "A local component state management library using Redux",
   "main": "dist/index.js",
   "directories": {
     "test": "tests"
   },
+  "npmName": "redux-fractal",
   "scripts": {
     "build": "$(npm bin)/babel -d dist src",
     "prepublish": "$(npm bin)/babel -d dist src",
-    "test": "ava --watch tests/*Spec.js"
+    "test": "ava --watch tests/*Spec.js",
+    "test-prod": "ava tests/*Spec.js"
   },
   "ava": {
     "require": [
@@ -54,13 +56,18 @@
     "babel-register": "^6.14.0",
     "enzyme": "^2.4.1",
     "jsdom": "^9.4.2",
+    "redux-saga": "^0.11.1",
+    "react-addons-test-utils": "^15.3.1",
     "react": "^15.3.1",
-    "react-addons-test-utils": "^15.3.1"
-  },
-  "dependencies": {
-    "invariant": "^2.2.1",
     "react-dom": "^15.3.1",
     "react-redux": "^4.4.5",
     "redux": "^3.5.2"
+  },
+  "peerDependencies": {
+      "react": "^0.14.0 || ^15.0.0-0",
+      "redux": "^2.0.0 || ^3.0.0"
+ },
+ "dependencies": {
+    "invariant": "^2.2.1"
   }
 }

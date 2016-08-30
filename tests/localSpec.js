@@ -4,8 +4,10 @@ import React from 'react';
 import local from '../src/local.js';
 import { Provider } from 'react-redux';
 import { createStore } from 'redux';
+import mySaga from './helpers/sagas.js';
 import { Store } from './helpers/configureStore.js';
-
+import createSagaMiddleware from 'redux-saga';
+import { applyMiddleware } from 'redux';
 const DummyComp = (props) => {
     return (<div></div>);
 }
@@ -15,6 +17,7 @@ const rootReducer = (state = { filter: null, sort: null, trigger: '', current: '
          case 'SET_FILTER':
             return Object.assign({}, state, { filter: action.payload });
          case 'SET_SORT':
+            // console.log(action.meta && JSON.stringify(action.meta));
             return Object.assign({}, state,
                 { sort: action.payload,
                   trigger: action.meta && action.meta.triggerComponentKey,
@@ -237,12 +240,12 @@ test(`Should be able to render multiple components of the same type
             "comp1": {
                 "filter": true,
                 "sort": "desc_globalSort",
-                trigger:undefined,current:undefined
+                trigger: 'comp1',current:undefined
             },
             "comp2": {
                 "filter": true,
                 "sort": "asc_globalSort",
-                trigger:undefined,current:undefined
+                trigger:'comp2',current:undefined
             }
         }
     });
@@ -286,4 +289,45 @@ test(`Should accept a mapStateToProps and transform the state using it`, t => {
     t.deepEqual(wrapper.find('DummyComp').props().sort, undefined);
     t.deepEqual(wrapper.find('DummyComp').props().computedProp, 3);
     wrapper.unmount();
+});
+
+test('Should be able to provide locally scoped middleware', t => {
+    const compReducer = (state = { user: {} }, action) => {
+        switch(action.type) {
+            case 'USER_FETCH_SUCCEEDED':
+                return Object.assign({}, state, { user: action.payload });
+            default:
+                return state;
+        }
+    }
+    const HOC = local({
+        key: (props) => props.id,
+        createStore: (props) => {
+            const sagaMiddleware = createSagaMiddleware();
+            const store = createStore(compReducer,
+                { user: {}, sort: props.sortOrder },
+                applyMiddleware(sagaMiddleware));
+            sagaMiddleware.run(mySaga)
+            return { store: store, cleanup: () => sagaMiddleware.cancel() };
+        },
+        mapDispatchToProps:(dispatch) => ({
+            onFetchUser: (userId) => dispatch({ type: 'USER_FETCH_REQUESTED', payload: userId  }),
+        })
+    });
+    const CompToRender = HOC(DummyComp);
+    const App = (props) => {
+        return(
+            <div>
+            <CompToRender sortOrder='asc' id='comp1' />
+            <CompToRender sortOrder='desc' id='comp2' />
+            </div>
+        );
+    };
+    const wrapper = mount(
+    <Provider store={Store}>
+        <App />
+    </Provider>);
+    wrapper.find('DummyComp').at(1).props().onFetchUser(1);
+    t.deepEqual(wrapper.find('DummyComp').at(1).props().user, { username: 'test', id: 1, sort: 'desc' });
+    t.deepEqual(wrapper.find('DummyComp').at(0).props().user, {});
 });

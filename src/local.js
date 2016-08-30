@@ -13,12 +13,16 @@ export default (Config) => (Component) => {
             this.resetUI = this.resetUI.bind(this);
             const compKey = typeof Config.key === 'function' ?
                 Config.key(props) : Config.key;
-            this.localDispatch = (action) => {
+            this.getWrappedAction = (action) => {
                 let wrappedAction = action;
                 if (typeof action === 'object') {
-                    const actionMeta = Object.assign({}, action.meta, { triggerComponentKey: this.key });
+                    const actionMeta = Object.assign({}, action.meta, { triggerComponentKey: compKey });
                     wrappedAction = Object.assign({}, action, { meta: actionMeta });
                 }
+                return wrappedAction;
+            };
+            this.localDispatch = (action) => {
+                const wrappedAction = this.getWrappedAction(action);
                 context.store.dispatch(wrappedAction);
             };
             this.store = null;
@@ -28,14 +32,24 @@ export default (Config) => (Component) => {
             this.unsubscribe = null;
         }
         componentWillMount() {
-            this.store = Config.createStore(this.props);
+            const storeResult = Config.createStore(this.props);
+            if (storeResult.store) {
+                this.store = storeResult.store;
+            }
+            this.storeCleanup = () => true;
+            if (storeResult.cleanup) {
+                this.storeCleanup = storeResult.cleanup;
+            }
+            if (storeResult.dispatch && storeResult.getState) {
+                this.store = storeResult;
+            }
             this.store.originalDispatch = this.store.dispatch;
             this.store.dispatch = (action) => {
                 const actionAlreadyWrapped = action && action.meta && action.meta.triggerComponentKey;
                 if (!actionAlreadyWrapped) {
                     this.localDispatch(action);
                 }
-                return this.store.originalDispatch(action);
+                return this.store.originalDispatch(this.getWrappedAction(action));
             };
             this.context.store.dispatch({
                 type: UIActions.MOUNT_COMPONENT,
@@ -49,6 +63,9 @@ export default (Config) => (Component) => {
                 payload: null,
                 meta: { triggerComponentKey: this.key }
             });
+            if (this.storeCleanup) {
+                this.storeCleanup();
+            }
             this.store = null;
         }
         resetUI() {
