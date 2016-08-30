@@ -23,7 +23,7 @@ export default (Config) => (Component) => {
             };
             this.localDispatch = (action) => {
                 const wrappedAction = this.getWrappedAction(action);
-                context.store.dispatch(wrappedAction);
+                return context.store.dispatch(wrappedAction);
             };
             this.store = null;
             invariant(Config.key,
@@ -46,10 +46,10 @@ export default (Config) => (Component) => {
             this.store.originalDispatch = this.store.dispatch;
             this.store.dispatch = (action) => {
                 const actionAlreadyWrapped = action && action.meta && action.meta.triggerComponentKey;
-                if (!actionAlreadyWrapped) {
-                    this.localDispatch(action);
-                }
-                return this.store.originalDispatch(this.getWrappedAction(action));
+                //if (!actionAlreadyWrapped) {
+                return this.localDispatch(action);
+                //}
+                 // return this.store.originalDispatch(this.getWrappedAction(action));
             };
             this.context.store.dispatch({
                 type: UIActions.MOUNT_COMPONENT,

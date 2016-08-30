@@ -283,6 +283,30 @@ It's important to note that by default component stores do not contain middlewar
 the global Redux store doesn't contain it by default and middleware needs to be added to it.
 This means for example that implictly you can only dispatch plain objects. To dispatch functions, promises etc
 configure the private component state with the needed middleware( eg redux-thunk etc )
+## Recipies
+### I need access to global application state in mapStateToProps of the 'local()' component
+
+Access to only the component's internal state in mapStateToProps is a conscious design decision.
+If you need data from the global state and need to update the component when that data changes you can
+wrap the component returned by 'local' in 'connect()'.
+```js
+    import { connect } from 'react-redux';
+    import { local } from 'redux-fractal';
+    import { createStore, compose } from 'redux';
+    const wrapper = compose(
+        connect((state) => ({
+            userSettings: state.UserSettingsReducer.settings
+        })),
+        local({
+            key: 'comp',
+            createStore: (props) => {
+                const filterVal = props.userSettings.defaultFilter;
+                return createStore(componentRootReducer, { filter: filterVal });
+            }
+        });
+    export default wrapper(MyComponent);
+```
+
 ## TODO (Help wanted)
  - Write additional tests
  - Verify server side rendering

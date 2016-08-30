@@ -240,12 +240,14 @@ test(`Should be able to render multiple components of the same type
             "comp1": {
                 "filter": true,
                 "sort": "desc_globalSort",
-                trigger: 'comp1',current:undefined
+                trigger: 'comp1',
+                current: 'comp1'
             },
             "comp2": {
                 "filter": true,
                 "sort": "asc_globalSort",
-                trigger:'comp2',current:undefined
+                trigger:'comp2',
+                current: 'comp2'
             }
         }
     });
@@ -293,6 +295,7 @@ test(`Should accept a mapStateToProps and transform the state using it`, t => {
 
 test('Should be able to provide locally scoped middleware', t => {
     const compReducer = (state = { user: {} }, action) => {
+        console.log('Received '+action.type);
         switch(action.type) {
             case 'USER_FETCH_SUCCEEDED':
                 return Object.assign({}, state, { user: action.payload });
