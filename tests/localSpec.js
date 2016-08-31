@@ -86,7 +86,7 @@ test(`Should dispatch local actions that update component state. The local actio
     t.deepEqual(filterVal, 'my term');
     t.deepEqual(sortVal, 'asc');
     // Check that global state is also updated
-    t.deepEqual(Store.getState().local.componentsState,
+    t.deepEqual(Store.getState().local,
                 {"myDumbComp":{"filter":"my term","sort":"asc", trigger:"myDumbComp", current:"myDumbComp"}});
     wrapper.unmount();
 });
@@ -232,29 +232,23 @@ test(`Should be able to render multiple components of the same type
     t.deepEqual(sortVal2, 'asc_globalSort');
     // Verify that the subscribers count is updated properly as components unmount
     t.deepEqual(Store.getState().local, {
-        "subscribersCount": {
-            "comp1": 1,
-            "comp2": 1
+        "comp1": {
+            "filter": true,
+            "sort": "desc_globalSort",
+            trigger: 'comp1',
+            current: 'comp1'
         },
-        "componentsState": {
-            "comp1": {
-                "filter": true,
-                "sort": "desc_globalSort",
-                trigger: 'comp1',
-                current: 'comp1'
-            },
-            "comp2": {
-                "filter": true,
-                "sort": "asc_globalSort",
-                trigger:'comp2',
-                current: 'comp2'
-            }
+        "comp2": {
+            "filter": true,
+            "sort": "asc_globalSort",
+            trigger:'comp2',
+            current: 'comp2'
         }
     });
     wrapper.unmount();
     t.deepEqual(
         Store.getState().local,
-        {"subscribersCount":{},"componentsState":{}}
+        {}
     );
 });
 
@@ -293,9 +287,38 @@ test(`Should accept a mapStateToProps and transform the state using it`, t => {
     wrapper.unmount();
 });
 
+test(`Should keep the state after unmount if persist option is set to true and should
+      properly reconnect the state when the component is mounted again`, t => {
+    const HOC = local({
+        key: 'myDumbComp',
+        createStore: (props, existingState) => {
+            return createStore(
+                rootReducer,
+                existingState || { filter: true, sort: props.sortOrder }
+            );
+        },
+        persist: true
+    });
+    const CompToRender = HOC(DummyComp);
+    const wrapper = mount(
+        <Provider store={Store}>
+            <CompToRender sortOrder='desc' a={1} b={2} />
+        </Provider>);
+    t.deepEqual(Store.getState().local, {'myDumbComp': { filter: true, sort: 'desc' }});
+    wrapper.unmount();
+    t.deepEqual(Store.getState().local, {'myDumbComp': { filter: true, sort: 'desc' }});
+    // Render again the component
+    const rerenderedWrapper = mount(
+        <Provider store={Store}>
+            <CompToRender sortOrder='asc' a={1} b={2} />
+        </Provider>);
+    const sortVal = rerenderedWrapper.find('DummyComp').props().sort;
+    // The component should be connected to existing state existing of replacing it
+    t.deepEqual(sortVal, 'desc');
+});
+
 test('Should be able to provide locally scoped middleware', t => {
     const compReducer = (state = { user: {} }, action) => {
-        console.log('Received '+action.type);
         switch(action.type) {
             case 'USER_FETCH_SUCCEEDED':
                 return Object.assign({}, state, { user: action.payload });

@@ -32,7 +32,8 @@ export default (Config) => (Component) => {
             this.unsubscribe = null;
         }
         componentWillMount() {
-            const storeResult = Config.createStore(this.props);
+            const existingState = this.context.store.getState().local[this.key];
+            const storeResult = Config.createStore(this.props, existingState);
             if (storeResult.store) {
                 this.store = storeResult.store;
             }
@@ -46,10 +47,7 @@ export default (Config) => (Component) => {
             this.store.originalDispatch = this.store.dispatch;
             this.store.dispatch = (action) => {
                 const actionAlreadyWrapped = action && action.meta && action.meta.triggerComponentKey;
-                //if (!actionAlreadyWrapped) {
                 return this.localDispatch(action);
-                //}
-                 // return this.store.originalDispatch(this.getWrappedAction(action));
             };
             this.context.store.dispatch({
                 type: UIActions.MOUNT_COMPONENT,
@@ -60,7 +58,7 @@ export default (Config) => (Component) => {
         componentWillUnmount() {
             this.context.store.dispatch({
                 type: UIActions.UNMOUNT_COMPONENT,
-                payload: null,
+                payload: { persist: Config.persist },
                 meta: { triggerComponentKey: this.key }
             });
             if (this.storeCleanup) {

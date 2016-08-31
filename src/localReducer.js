@@ -16,77 +16,52 @@ const initialiseComponentState = (state, payload, componentKey) => {
     const defaultGlobalFilter = () => false;
     globalActions[componentKey] = config.filterGlobalActions || defaultGlobalFilter;
     const initialState = stores[componentKey].getState();
-    const newComponentsState = Object.assign({}, state.componentsState, { [componentKey]: initialState });
+    const newComponentsState = Object.assign({}, state, { [componentKey]: initialState });
     return newComponentsState;
 };
 const destroyComponentState = (state, payload, componentKey) => {
     const newState = Object.assign({}, state);
-    delete newState.componentsState[componentKey];
+    delete newState[componentKey];
     delete stores[componentKey];
-    return newState.componentsState;
+    return newState;
 };
 const updateSingleComponent = (oldComponentState, action, componentKey) => {
     const store = stores[componentKey];
     if (store) {
         action.meta = Object.assign({}, action.meta, { currentComponentKey: componentKey });
         store.originalDispatch(action);
-        // console.log('Updated '+componentKey+' for action'+action.type+' to state'+JSON.stringify(store.getState()));
         return store.getState();
     }
     return oldComponentState;
 };
 
 const updateComponentState = (state, action, componentKey) => {
-    const newState = Object.keys(state.componentsState).reduce((stateAcc, k) => {
+    const newState = Object.keys(state).reduce((stateAcc, k) => {
         const shouldUpdate = componentKey == k || (typeof globalActions[k] === 'function' && globalActions[k](action));
-        let updatedState = state.componentsState[k];
+        let updatedState = state[k];
         if (shouldUpdate) {
-            updatedState = updateSingleComponent(state.componentsState[k], action, k);
+            updatedState = updateSingleComponent(state[k], action, k);
         }
         return Object.assign({}, stateAcc, { [k]: updatedState });
     }, {});
-    return Object.assign({}, state, { componentsState: newState });
+    return Object.assign({}, state, newState);
 };
 
-export default (state = { componentsState: {}, subscribersCount: {} }, action) => {
+export default (state = {}, action) => {
     const componentKey = action.meta && action.meta.triggerComponentKey;
-    let subscribersCount = 0;
-    let newSubscribers = {};
     switch (action.type) {
         case UIActions.MOUNT_COMPONENT:
-            subscribersCount = state.subscribersCount[componentKey] || 0;
-            subscribersCount++;
-            newSubscribers = Object.assign({},
-                state.subscribersCount,
-                { [componentKey]: subscribersCount }
-            );
-            if (subscribersCount === 1) {
-                // First time
-                return ({
-                    subscribersCount: newSubscribers,
-                    componentsState: initialiseComponentState(state,
-                        action.payload,
-                        componentKey)
-                });
-            }
-            return Object.assign({}, state, { subscribersCount: newSubscribers });
+            return initialiseComponentState(
+                state,
+                action.payload,
+                componentKey)
         case UIActions.RESET_COMPONENT_STATE:
             return initialiseComponentState(state, action.payload, componentKey);
         case UIActions.UNMOUNT_COMPONENT:
-            subscribersCount = state.subscribersCount[componentKey] || 1;
-            subscribersCount--;
-            newSubscribers = Object.assign({},
-                state.subscribersCount,
-                { [componentKey]: subscribersCount }
-            );
-            if (subscribersCount === 0) {
-                delete newSubscribers[componentKey];
-                return ({
-                    subscribersCount: newSubscribers,
-                    componentsState: destroyComponentState(state, action.payload, componentKey)
-                });
+            if (!action.payload.persist) {
+                return destroyComponentState(state, action.payload, componentKey);
             }
-            return Object.assign({}, state, { subscribersCount: newSubscribers });
+            return state;
         default:
             return updateComponentState(state, action, componentKey);
     }
