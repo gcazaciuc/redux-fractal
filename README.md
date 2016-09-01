@@ -32,7 +32,7 @@ Add the local reducer to the redux store under the
     }))
 ```
 ### Adding the `local` HOC to components maintaining UI state
-Decorate the components that hold ui state( transient state, scoped to that very specific component ) with the 'local' higher order component and provide a mandatory, globally unique key for your component and a createStore method.
+Decorate the components that hold ui state( transient state, scoped to that very specific component ) with the 'local' higher order component and provide a mandatory, globally unique key for your component and a `createStore` method.
 
 The key can be generated based on props or a static string but it must be unique and be stable between re-renders. Basically it should follow exactly
 the same rules as the React component 'key' but be globally unique.
@@ -190,7 +190,7 @@ local({
     }
 })
 ```
-Now any RESET_FILTERS or CLEAR_SORTING global actions or originated by other components will be allowed.
+Now any `RESET_FILTERS` or `CLEAR_SORTING` global actions or originated by other components will be allowed.
 You have lots of flexibility with this method to react when a component updates it's UI state.
 Crazy example: when the sorting from one component changes all dropdowns from another component should close:
  ```js
@@ -364,4 +364,3 @@ as return by the `key` property of the `local` HOC.
 ## TODO (Help wanted)
  - Write additional tests
  - Verify server side rendering
- - Verify behaviour with custom middleware
