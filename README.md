@@ -328,6 +328,35 @@ const wrapper = local({
     });
 export default wrapper(MyComponent);
 ```
+If there are multiple instance of MyComponent, using `persist` as shown above will persist the state of ALL instances.
+You can have fine grained control over which component instances get persisted and which do not
+by defining `persist` as a function receiving the component props.
+```js
+const HOC = local({
+    key: (props) => props.itemId,
+    createStore: (props, existingState) => {
+        return createStore(
+            rootReducer,
+            existingState || { filter: true }
+        );
+    },
+    // Any logic depending on props here to decide if the component state should be persisted
+    persist: (props) => props.keepState
+});
+const ConnectedItem = HOC(Item);
+
+const App = (props) => {
+    return (
+            <div>
+               <ConnectedItem itemId={'a'} keepState={true} />
+               <ConnectedItem itemId={'b'} keepState={false} />
+            </div>
+    );
+}
+```
+In the above example only the state of component with itemId 'a' will be kept in the global
+state after the component unmounts.
+
 ### I need to read a component's state somewhere else: eg in thunk action creators, sagas, in `mapStateToProps`
 All the local components state is available at `state.local[key]` where `key` is the key for the component
 as return by the `key` property of the `local` HOC.

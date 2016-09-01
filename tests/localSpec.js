@@ -5,7 +5,7 @@ import local from '../src/local.js';
 import { Provider } from 'react-redux';
 import { createStore } from 'redux';
 import mySaga from './helpers/sagas.js';
-import { Store } from './helpers/configureStore.js';
+import { configureStore } from './helpers/configureStore.js';
 import createSagaMiddleware from 'redux-saga';
 import { applyMiddleware } from 'redux';
 const DummyComp = (props) => {
@@ -46,7 +46,7 @@ test('Should return the correct initial state for the component', t => {
             onSort: (sort) => dispatch({ type: 'SET_SORT', payload: sort }),
         })
     })(DummyComp);
-    const wrapper = mount(<Provider store={Store}><CompToRender sortOrder='desc' /></Provider>);
+    const wrapper = mount(<Provider store={configureStore()}><CompToRender sortOrder='desc' /></Provider>);
     const filterVal = wrapper.find('DummyComp').props().filter;
     const sortVal = wrapper.find('DummyComp').props().sort;
     t.deepEqual(filterVal, true);
@@ -56,6 +56,7 @@ test('Should return the correct initial state for the component', t => {
 
 test(`Should dispatch local actions that update component state. The local actions
       should also hit the global app reducers`, t => {
+    const Store = configureStore();
     const CompToRender = local({
         key: 'myDumbComp',
         filterGlobalActions: (action) => {
@@ -93,6 +94,7 @@ test(`Should dispatch local actions that update component state. The local actio
 
 test(`Should forward global actions to the component as long as they pass
       the global actions filter`, t => {
+    const Store = configureStore();
     const CompToRender = local({
         key: 'myDumbComp',
         filterGlobalActions: (action) => {
@@ -115,6 +117,7 @@ test(`Should forward global actions to the component as long as they pass
 });
 
 test(`Should NOT forward any global actions if 'filterGlobalActions' function is not defined`, t => {
+    const Store = configureStore();
     const CompToRender = local({
         key: 'myDumbComp',
         createStore: (props) => {
@@ -140,6 +143,7 @@ test(`Should NOT forward any global actions if 'filterGlobalActions' function is
 
 test(`Should not forward other actions besides those the component is tagged
      on to the component is filterGlobalActions returns false for the action`, t => {
+         const Store = configureStore();
          const HOC = local({
              key: (props) => props.id,
              filterGlobalActions: (action) => {
@@ -182,6 +186,7 @@ test(`Should not forward other actions besides those the component is tagged
 test(`Should be able to render multiple components of the same type
     and each should get it's own slice of state and react to it's own
     internal actions`, t => {
+    const Store = configureStore();
     const HOC = local({
         key: (props) => props.id,
         filterGlobalActions: (action) => {
@@ -253,6 +258,7 @@ test(`Should be able to render multiple components of the same type
 });
 
 test(`Should accept a mapStateToProps and transform the state using it`, t => {
+    const Store = configureStore();
     const CompToRender = local({
         key: 'myDumbComp',
         filterGlobalActions: (action) => {
@@ -289,6 +295,7 @@ test(`Should accept a mapStateToProps and transform the state using it`, t => {
 
 test(`Should keep the state after unmount if persist option is set to true and should
       properly reconnect the state when the component is mounted again`, t => {
+    const Store = configureStore();
     const HOC = local({
         key: 'myDumbComp',
         createStore: (props, existingState) => {
@@ -317,7 +324,35 @@ test(`Should keep the state after unmount if persist option is set to true and s
     t.deepEqual(sortVal, 'desc');
 });
 
+test(`Should be able to control whether the component state is persisted or not
+        upon unmount is a function receiving component props`, t => {
+    const Store = configureStore();
+    const HOC = local({
+        key: (props) => props.id,
+        createStore: (props, existingState) => {
+            return createStore(
+                rootReducer,
+                existingState || { filter: true, sort: props.sortOrder }
+            );
+        },
+        persist: (props) => props.keepState
+    });
+    const CompToRender = HOC(DummyComp);
+    const wrapper = mount(
+        <Provider store={Store}>
+            <div>
+                <CompToRender sortOrder='desc' id={'a'} keepState={false} />
+                <CompToRender sortOrder='asc' id={'b'} keepState={true} />
+            </div>
+        </Provider>);
+    t.deepEqual(Store.getState().local, {'a': { filter: true, sort: 'desc' }, 'b': {filter: true, sort: 'asc'} });
+    wrapper.unmount();
+    // State of b is still there even after unmount
+    t.deepEqual(Store.getState().local, {'b': {filter: true, sort: 'asc'}});
+});
+
 test('Should be able to provide locally scoped middleware', t => {
+    const Store = configureStore();
     const compReducer = (state = { user: {} }, action) => {
         switch(action.type) {
             case 'USER_FETCH_SUCCEEDED':

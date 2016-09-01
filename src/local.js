@@ -56,9 +56,11 @@ export default (Config) => (Component) => {
             });
         }
         componentWillUnmount() {
+            const persist = typeof Config.persist === 'function' ?
+                                Config.persist(this.props) : Config.persist;
             this.context.store.dispatch({
                 type: UIActions.UNMOUNT_COMPONENT,
-                payload: { persist: Config.persist },
+                payload: { persist: persist },
                 meta: { triggerComponentKey: this.key }
             });
             if (this.storeCleanup) {
