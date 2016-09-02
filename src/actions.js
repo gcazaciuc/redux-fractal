@@ -1,4 +1,13 @@
-export const MOUNT_COMPONENT = '@@ui/MOUNT_COMPONENT';
-export const UNMOUNT_COMPONENT = '@@ui/UNMOUNT_COMPONENT';
-export const UPDATE_COMPONENT_STATE = '@@ui/UPDATE_COMPONENT_STATE';
-export const RESET_COMPONENT_STATE = '@@ui/RESET_COMPONENT_STATE';
+export const CREATE_COMPONENT_STATE = '@@ui/CREATE_COMPONENT_STATE';
+export const DESTROY_COMPONENT_STATE = '@@ui/DESTROY_COMPONENT_STATE';
+export const DESTROY_ALL_COMPONENTS_STATE = '@@ui/DESTROY_ALL_COMPONENTS_STATE';
+
+export const destroyComponentState = (componentKey) => ({
+     type: DESTROY_COMPONENT_STATE,
+     payload: { persist: false, hasStore: true },
+     meta: { reduxFractalTriggerComponent: componentKey }
+});
+export const destroyAllComponentsState = () => ({
+     type: DESTROY_ALL_COMPONENTS_STATE,
+     payload: null
+});

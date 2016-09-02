@@ -1,7 +1,7 @@
 # redux-fractal
 Local component state &amp; actions in Redux.
 
-Provides the means to hold up local component state in redux state,  to dispatch locally scoped actions and to react to global ones.
+Provides the means to hold up local component state in Redux state,  to dispatch locally scoped actions and to react to global ones.
 
 What Redux fractal offers is a Redux private store for each component with the notable difference that the component state is actually help up in your
 app's state atom, so all global and components ui state live together.
@@ -34,8 +34,9 @@ Add the local reducer to the redux store under the
 ### Adding the `local` HOC to components maintaining UI state
 Decorate the components that hold ui state( transient state, scoped to that very specific component ) with the 'local' higher order component and provide a mandatory, globally unique key for your component and a `createStore` method.
 
-The key can be generated based on props or a static string but it must be unique and be stable between re-renders. Basically it should follow exactly
-the same rules as the React component 'key' but be globally unique.
+The key can be generated based on props or a static string but it must bestable between re-renders. Basically it should follow exactly
+the same rules as the React component 'key'. In general it should be unique among components, unless you
+want multiple components to use the same store.
 ```js
     import { local } from 'redux-fractal';
     import { createStore } from 'redux';
@@ -135,7 +136,7 @@ Note that local dispatches can be caught by the component's own reducer AND by g
         createStore: (props) => createStore(rootReducer, initialState),
         mapDispatchToProps: (dispatch) => {
             // ALL actions dispatched via 'dispatch' function above have the component key tagged to the action.
-            // You can see that by inspecting action.meta.triggerComponentKey in redux dev tools.
+            // You can see that by inspecting action.meta.reduxFractalTriggerComponent in redux dev tools.
             // All local actions are dispatched also on the global store
             // You must return an object containing the keys that will become props to the component just like in react redux 'connect'
             return {
@@ -147,7 +148,7 @@ Note that local dispatches can be caught by the component's own reducer AND by g
 ```
 
 These actions can be caught in any global reducer and by default only in the originating component reducer.
-One can inspect the originating component by looking at `action.meta.triggerComponentKey` to get the component's key that dispatched the action.
+One can inspect the originating component by looking at `action.meta.reduxFractalTriggerComponent` to get the component's key that dispatched the action.
 
 ```js
 import { combineReducers, createStore } from 'redux';
@@ -212,7 +213,7 @@ Crazy example: when the sorting from one component changes all dropdowns from an
          // when things happen in the 'mygreattable' component, in this
          // case when sorting changes
          const allowedActions = ['SET_SORT'];
-         return allowedActions.indexOf(action.type) !== -1 && actions.meta.triggerComponentKey === 'mygreattable';
+         return allowedActions.indexOf(action.type) !== -1 && actions.meta.reduxFractalTriggerComponent === 'mygreattable';
      }
  })
  ```
@@ -360,6 +361,138 @@ state after the component unmounts.
 ### I need to read a component's state somewhere else: eg in thunk action creators, sagas, in `mapStateToProps`
 All the local components state is available at `state.local[key]` where `key` is the key for the component
 as return by the `key` property of the `local` HOC.
+
+### Sharing the same stores across multiple components
+
+Starting with version 1.3 it's possible to share the same store across multiple components. All of the components
+having the same `key` will have access to the store's state and be able to dispatch actions on it.
+To do this in a sane manner there are a few rules to be followed:
+- Components having the same `key` value defined for `local` HOC use the same store
+- The component sharing the store state must be a parent of the components consuming it
+- Child components accessing the shared store should NOT define a `createStore` method. Only the parent component should do this.
+- The store lifetime is controlled by the parent defining it.
+
+It sounds more complicated than it actually is. Let's see an example:
+
+```js
+    // in containers/ParentComp.js
+    const ParentComp = local({
+        key: 'parentKey',
+        createStore: (props) => createStore(rootReducer, {sort: 1})
+    });
+```
+
+```js
+    // in containers/ChildComp.js
+    const ChildComp = local({
+        key: 'parentKey',
+        mapDispatchToProps: (dispatch) => {
+            onSort: (val) => dispatch(onSort(val)) // I'm dispatching actions on ParentComp store
+        },
+        mapStateToProps: (state, ownProps) => {
+            // I got the whole ParentComp state in here. Take the state slices you need and inject
+            // them in the child component
+        }
+    });
+```
+
+### I would like to use React `context` on the components returned by `local`
+
+There is only 1 thing to be aware: `local` returns a component that already has
+`contextTypes` defined in order to be able to access the global Redux store.
+As such take care to extend the `contextTypes` and not over-write them.
+
+Also note that `key`, `createStore` and `persist` receive the component context as
+the last parameter so you can make use of everything on the `context` besides props to
+create a component's key, store state or control it's persistence settings.
+
+```js
+    // in containers/ParentComp.js
+    const WrappedComp = local({
+        key: (props, context) => context.parentKey,
+        createStore: (props, existingState,  context) => ...
+        persist: (props, context) => ....
+    })(MyComp);
+    WrappedComp.contextTypes = Object.assign({}, WrappedComp.contextTypes, {
+        parentKey: React.PropTypes.string
+    });
+```
+
+### I need to do some store cleanup(eg cancel middleware etc) upon component unmount
+
+`createStore` can return either a Redux store object or an object having 2 keys:
+
+```js
+
+createStore: (props, existingState) => ({
+    store: createStore( .... ), // this is the result of Redux createStore
+    cleanup: () => .... // cleanup is optional, you don't have to return it
+})
+```
+When the component unmounts, if a cleanup method has been defined it will be automatically invoked.
+
+### I need to manually cleanup the state of components created with `persist: true`( a single one or all of them)
+
+In some situations you might want to blow up a component state manually:
+- The component is unmounted and `persist: true` was set for that component
+- You navigate away from the page and want to cleanup the state of all components having `persist: true`
+
+For these cases there are 2 actions that you can import and dispatch:
+```js
+    import { destroyComponentState, destroyAllComponentsState } from 'redux-fractal';
+    Store.dispatch(destroyComponentState(componentKey)); // Destroy a specific component state
+    Store.dispatch(destroyAllComponentsState()); // Destroy all components state
+```
+
+Please note that if there are still components mounted that listen to the destroyed stores
+the components will not update anymore.
+
+### I want to re-use reducers in multiple components
+
+You can use any strategy you want for creating the root reducer of a certain component.
+Eg you can use `combineReducers` from Redux or apply other strategies.
+
+One strategy that we found usefull was the `mergeReducers` and it's shipped as part of redux-fractal.
+Let's suppose you have the following reducers:
+```js
+  const EditableReducer = (state = { editState: false }, action) => {
+      case EDIT_STARTED:
+            return ..... // Determine new state somehow
+      case EDIT_STOPPED:
+            return .... // Determine new state somehow
+  }
+
+  const FiltersReducer = (state = { filtersList: [] }, action) => {
+      case SET_FILTER:
+            return ..... // Determine new state somehow
+      case REMOVE_FILTER:
+            return .... // Determine new state somehow
+  }
+```
+What you would like is to take these 2 reducers and apply them to any components
+that have editable and filter behavior , basically which have the same way
+of updating their filters and edit state.
+Besides that it would be good if the component would also have it's own, component specific data.
+
+```js
+    import { mergeReducers } from 'redux-fractal/utils';
+    const ComponentSpecificReducer = (state = { data: {} }, action) => {
+        case COMPONENT_ACTION:
+                return .....
+    }
+    const componentRootReducer = mergeReducers(ComponentSpecificReducer, EditableReducer, FiltersReducer)
+```
+
+Some interesting points:
+
+- The final component state would have the shape { data: {}, filtersList: [], editState: false }.
+Of course the initial values can be supplied via `createStore` as usual.
+- When an action comes in it will be passed throught all reducers from right to left: FiltersReducer then EditableReducer then ComponentSpecificReducer.
+- Each reducer will receive the full component state not only it's piece, but it doesn't need to be aware of that is concerned with only updating
+it's piece of data( so each one will receive  { data: {}, filtersList: [], editState: false } )
+- The merged reducers must all return objects so that they can be merged together into a final state.
+
+
 
 ## TODO (Help wanted)
  - Write additional tests

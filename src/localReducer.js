@@ -28,7 +28,7 @@ const destroyComponentState = (state, payload, componentKey) => {
 const updateSingleComponent = (oldComponentState, action, componentKey) => {
     const store = stores[componentKey];
     if (store) {
-        action.meta = Object.assign({}, action.meta, { currentComponentKey: componentKey });
+        action.meta = Object.assign({}, action.meta, { reduxFractalCurrentComponent: componentKey });
         store.originalDispatch(action);
         return store.getState();
     }
@@ -48,21 +48,62 @@ const updateComponentState = (state, action, componentKey) => {
 };
 
 export default (state = {}, action) => {
-    const componentKey = action.meta && action.meta.triggerComponentKey;
+    const componentKey = action.meta && action.meta.reduxFractalTriggerComponent;
     switch (action.type) {
-        case UIActions.MOUNT_COMPONENT:
+        case UIActions.CREATE_COMPONENT_STATE:
             return initialiseComponentState(
                 state,
                 action.payload,
-                componentKey)
-        case UIActions.RESET_COMPONENT_STATE:
-            return initialiseComponentState(state, action.payload, componentKey);
-        case UIActions.UNMOUNT_COMPONENT:
-            if (!action.payload.persist) {
+                componentKey);
+        case UIActions.DESTROY_COMPONENT_STATE:
+            if (!action.payload.persist && stores[componentKey] && action.payload.hasStore) {
                 return destroyComponentState(state, action.payload, componentKey);
             }
             return state;
+        case UIActions.DESTROY_ALL_COMPONENTS_STATE:
+            let nextState = state;
+            Object.keys(state).forEach((k) => {
+                nextState = destroyComponentState(nextState, {}, k);
+            });
+            return nextState;
         default:
             return updateComponentState(state, action, componentKey);
     }
 };
+
+
+
+export const createStore = (createStoreFn, props, componentKey, existingState, context) => {
+    if (!stores[componentKey]) {
+        const getWrappedAction = (action) => {
+            let wrappedAction = action;
+            if (typeof action === 'object') {
+                const actionMeta = Object.assign({}, action.meta, { reduxFractalTriggerComponent: componentKey });
+                wrappedAction = Object.assign({}, action, { meta: actionMeta });
+            }
+            return wrappedAction;
+        };
+        const localDispatch = (action) => {
+            const wrappedAction = getWrappedAction(action);
+            return context.store.dispatch(wrappedAction);
+        };
+        const storeResult = createStoreFn(props, existingState, context);
+        let storeCleanup = () => true;
+        if (storeResult.store) {
+            stores[componentKey] = storeResult.store;
+        }
+        if (storeResult.cleanup) {
+            storeCleanup = storeResult.cleanup;
+        }
+        if (storeResult.dispatch && storeResult.getState) {
+            stores[componentKey] = storeResult;
+        }
+        stores[componentKey].originalDispatch = stores[componentKey].dispatch;
+        stores[componentKey].dispatch = (action) => {
+            const actionAlreadyWrapped = action && action.meta && action.meta.reduxFractalTriggerComponent;
+            return localDispatch(action);
+        };
+        return { store: stores[componentKey], cleanup: storeCleanup };
+    }
+    return { store: stores[componentKey] };
+}

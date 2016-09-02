@@ -8,10 +8,28 @@ import mySaga from './helpers/sagas.js';
 import { configureStore } from './helpers/configureStore.js';
 import createSagaMiddleware from 'redux-saga';
 import { applyMiddleware } from 'redux';
+import { destroyAllComponentsState, destroyComponentState } from '../src/index.js';
+
 const DummyComp = (props) => {
     return (<div></div>);
 }
 DummyComp.displayName = 'DummyComp';
+class ContextProviderComp extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    getChildContext() {
+        return { sortOrder: "asc", "keepState": true, "id": 'abc' };
+    }
+    render() {
+        return React.Children.only(this.props.children);
+    }
+}
+ContextProviderComp.childContextTypes = {
+     sortOrder: React.PropTypes.string,
+     keepState: React.PropTypes.bool,
+     id: React.PropTypes.string
+};
 const rootReducer = (state = { filter: null, sort: null, trigger: '', current: '' }, action) => {
      switch(action.type) {
          case 'SET_FILTER':
@@ -20,8 +38,8 @@ const rootReducer = (state = { filter: null, sort: null, trigger: '', current: '
             // console.log(action.meta && JSON.stringify(action.meta));
             return Object.assign({}, state,
                 { sort: action.payload,
-                  trigger: action.meta && action.meta.triggerComponentKey,
-                  current: action.meta && action.meta.currentComponentKey
+                  trigger: action.meta && action.meta.reduxFractalTriggerComponent,
+                  current: action.meta && action.meta.reduxFractalCurrentComponent
                 });
          case 'GLOBAL_ACTION':
             return Object.assign({}, state, { filter: 'globalFilter' });
@@ -322,6 +340,7 @@ test(`Should keep the state after unmount if persist option is set to true and s
     const sortVal = rerenderedWrapper.find('DummyComp').props().sort;
     // The component should be connected to existing state existing of replacing it
     t.deepEqual(sortVal, 'desc');
+    wrapper.unmount();
 });
 
 test(`Should be able to control whether the component state is persisted or not
@@ -349,6 +368,88 @@ test(`Should be able to control whether the component state is persisted or not
     wrapper.unmount();
     // State of b is still there even after unmount
     t.deepEqual(Store.getState().local, {'b': {filter: true, sort: 'asc'}});
+    Store.dispatch(destroyAllComponentsState());
+});
+
+test(`Should pass the component context as last argument to callback style configs`, t => {
+    const Store = configureStore();
+    const HOC = local({
+        key: (props, context) => context.id,
+        createStore: (props, existingState, context) => {
+            return createStore(
+                rootReducer,
+                existingState || { filter: true, sort: context.sortOrder }
+            );
+        },
+        persist: (props, context) => context.keepState
+    });
+    const CompToRender = HOC(DummyComp);
+    CompToRender.contextTypes = Object.assign({}, CompToRender.contextTypes, {
+        sortOrder: React.PropTypes.string,
+        keepState: React.PropTypes.bool,
+        id: React.PropTypes.string
+    });
+    const wrapper = mount(
+        <Provider store={Store}>
+            <ContextProviderComp>
+            <div>
+                <CompToRender sortOrder='none' id={'a'} keepState={false} />
+                <CompToRender sortOrder='none' id={'b'} keepState={false} />
+            </div>
+            </ContextProviderComp>
+        </Provider>);
+    // There is a single comp state generated because the ids of the components are the same
+    t.deepEqual(Store.getState().local, {'abc': { filter: true, sort: 'asc' } });
+    wrapper.unmount();
+    // State it's still persisted because 'context' said so
+    t.deepEqual(Store.getState().local, {'abc': { filter: true, sort: 'asc' } });
+    Store.dispatch(destroyAllComponentsState());
+});
+
+test(`Should re-use the same store if 2 components have the same key`, t => {
+    const Store = configureStore();
+    const HOC = local({
+        key: (props) => props.id,
+        createStore: (props, existingState) => {
+            return createStore(
+                rootReducer,
+                existingState || { filter: true, sort: props.sortOrder }
+            );
+        },
+        persist: (props) => props.keepState,
+        mapDispatchToProps: (dispatch) => ({
+            onFilter: (filter) => dispatch({ type: 'SET_FILTER', payload: filter  }),
+            onSort: (sort) => dispatch({ type: 'SET_SORT', payload: sort }),
+        })
+    });
+    const otherHOC = local({
+        key: (props) => props.id,
+        persist: (props) => props.keepState,
+        mapDispatchToProps: (dispatch) => ({
+            onFilter: (filter) => dispatch({ type: 'SET_FILTER', payload: filter  }),
+            onSort: (sort) => dispatch({ type: 'SET_SORT', payload: sort }),
+        })
+    });
+    const CompToRender = HOC(DummyComp);
+    const OtherCompToRender = otherHOC(DummyComp);
+    const wrapper = mount(
+        <Provider store={Store}>
+            <div>
+                <CompToRender sortOrder='asc' id={'a'} keepState={true} />
+                <OtherCompToRender sortOrder='desc' id={'a'} keepState={false} />
+            </div>
+        </Provider>);
+    // There should be a single state for both components
+    t.deepEqual(Store.getState().local, {'a': { filter: true, sort: 'asc' } });
+    wrapper.find('DummyComp').at(0).props().onSort('desc');
+    t.deepEqual(Store.getState().local, {'a': { filter: true, sort: 'desc', trigger: 'a', current: 'a' } });
+    // Components connected to the same store. Dispatching on the other component affects the same store
+    wrapper.find('DummyComp').at(1).props().onSort('asc');
+    t.deepEqual(Store.getState().local, {'a': { filter: true, sort: 'asc', trigger: 'a', current: 'a' } });
+    wrapper.unmount();
+    // Should respect the persist the persist setting of the store owner
+    t.deepEqual(Store.getState().local, {'a': { filter: true, sort: 'asc', trigger: 'a', current: 'a' } });
+    Store.dispatch(destroyAllComponentsState());
 });
 
 test('Should be able to provide locally scoped middleware', t => {
@@ -369,7 +470,7 @@ test('Should be able to provide locally scoped middleware', t => {
                 { user: {}, sort: props.sortOrder },
                 applyMiddleware(sagaMiddleware));
             sagaMiddleware.run(mySaga)
-            return { store: store, cleanup: () => sagaMiddleware.cancel() };
+            return { store: store, cleanup: () => true };
         },
         mapDispatchToProps:(dispatch) => ({
             onFetchUser: (userId) => dispatch({ type: 'USER_FETCH_REQUESTED', payload: userId  }),
@@ -391,4 +492,49 @@ test('Should be able to provide locally scoped middleware', t => {
     wrapper.find('DummyComp').at(1).props().onFetchUser(1);
     t.deepEqual(wrapper.find('DummyComp').at(1).props().user, { username: 'test', id: 1, sort: 'desc' });
     t.deepEqual(wrapper.find('DummyComp').at(0).props().user, {});
+    wrapper.unmount();
+});
+
+test(`Should blow up a single component state or all of the components state`, t => {
+    const Store = configureStore();
+    const HOC = local({
+        key: (props) => props.id,
+        createStore: (props, existingState) => {
+            return createStore(
+                rootReducer,
+                existingState || { filter: true, sort: props.sortOrder }
+            );
+        },
+        persist: (props) => props.keepState
+    });
+    const CompToRender = HOC(DummyComp);
+
+    const wrapper = mount(
+        <Provider store={Store}>
+            <div>
+                <CompToRender sortOrder='none' id={'a'} keepState={true} />
+                <CompToRender sortOrder='none' id={'b'} keepState={true} />
+                <CompToRender sortOrder='none' id={'c'} keepState={true} />
+            </div>
+        </Provider>);
+    // There is a single comp state generated because the ids of the components are the same
+    t.deepEqual(Store.getState().local, {
+        'a': { filter: true, sort: 'none' },
+        'b': { filter: true, sort: 'none' },
+        'c': { filter: true, sort: 'none' }
+    });
+    wrapper.unmount();
+    // State it's still persisted because 'context' said so
+    t.deepEqual(Store.getState().local, {
+        'a': { filter: true, sort: 'none' },
+        'b': { filter: true, sort: 'none' },
+        'c': { filter: true, sort: 'none' }
+    });
+    Store.dispatch(destroyComponentState('a'));
+    t.deepEqual(Store.getState().local, {
+        'b': { filter: true, sort: 'none' },
+        'c': { filter: true, sort: 'none' }
+    });
+    Store.dispatch(destroyAllComponentsState());
+    t.deepEqual(Store.getState().local, {});
 });
