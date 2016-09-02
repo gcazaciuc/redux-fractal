@@ -4,3 +4,5 @@ node_js:
 branches:
   only:
     - master
+after_success:
+    - './node_modules/.bin/nyc report --reporter=text-lcov | ./node_modules/.bin/coveralls'

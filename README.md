@@ -1,4 +1,6 @@
 # redux-fractal
+![Travis CI](https://travis-ci.org/gcazaciuc/redux-fractal.svg?branch=master)
+
 Local component state &amp; actions in Redux.
 
 Provides the means to hold up local component state in Redux state,  to dispatch locally scoped actions and to react to global ones.
