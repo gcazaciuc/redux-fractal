@@ -1,5 +1,6 @@
 # redux-fractal
 ![Travis CI](https://travis-ci.org/gcazaciuc/redux-fractal.svg?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/gcazaciuc/redux-fractal/badge.svg)](https://coveralls.io/github/gcazaciuc/redux-fractal)
 
 Local component state &amp; actions in Redux.
 
