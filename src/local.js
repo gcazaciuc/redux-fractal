@@ -55,9 +55,6 @@ export default (Config) => (Component) => {
             );
         }
     }
-    UI.propTypes = {
-        key: React.PropTypes.string
-    };
     UI.contextTypes = {
         store: React.PropTypes.shape({
             subscribe: React.PropTypes.func.isRequired,

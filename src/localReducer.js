@@ -1,15 +1,6 @@
 import * as UIActions from './actions.js';
 const stores = {};
 const globalActions = {};
-
-export const defaultReducer = (state = {}, action) => {
-    switch (action.type) {
-        case 'UPDATE_UI':
-            return Object.assign({}, state, action.payload);
-        default:
-            return state;
-    }
-};
 const initialiseComponentState = (state, payload, componentKey) => {
     const { config, props, store } = payload;
     stores[componentKey] = store;
