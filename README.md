@@ -6,7 +6,7 @@ Local component state &amp; actions in Redux.
 
 Provides the means to hold up local component state in Redux state,  to dispatch locally scoped actions and to react to global ones.
 
-What Redux fractal offers is a Redux private store for each component with the notable difference that the component state is actually help up in your
+What Redux fractal offers is a Redux private store for each component with the notable difference that the component state is actually held up in your
 app's state atom, so all global and components ui state live together.
 
 The unique and powerful approach consists in the fact that it allows you to
@@ -37,7 +37,7 @@ Add the local reducer to the redux store under the
 ### Adding the `local` HOC to components maintaining UI state
 Decorate the components that hold ui state( transient state, scoped to that very specific component ) with the 'local' higher order component and provide a mandatory, globally unique key for your component and a `createStore` method.
 
-The key can be generated based on props or a static string but it must bestable between re-renders. Basically it should follow exactly
+The key can be generated based on props or a static string but it must be stable between re-renders. Basically it should follow exactly
 the same rules as the React component 'key'. In general it should be unique among components, unless you
 want multiple components to use the same store.
 ```js
@@ -70,7 +70,7 @@ const rootReducer = (state = { filter: null, sort: null, trigger: '', current: '
      }
 };
 ```
-Note that the reducer is like any other ordinary reducer used in a Redux app. The difference is  that it manages and controls the state transitions for a certain component state.
+Note that the reducer is like any other ordinary reducer used in a Redux app. The difference is that it manages and controls the state transitions for a certain component state.
 
 In fact, you can use whatever method of combining reducers you use for your app with no exceptions, also for the individual components:
 ```js
@@ -87,7 +87,7 @@ local({
 })
 ```
 ## Accessing local state and dispatching local actions
-The well know `mapStateToProps` and `mapDispatchToProps` familiar from react-redux 'connect' are available having the very same signatures.
+The well know `mapStateToProps` and `mapDispatchToProps` familiar from react-redux `connect` are available having the very same signatures.
 In fact , internally, redux-fractal uses the connect function from 'react-redux' to connect the component to it's private store.
 
 The difference is, that you get only the component's state in `mapStateToProps` as opposed to the entire app state and the `dispatch`
@@ -500,3 +500,8 @@ it's piece of data( so each one will receive  { data: {}, filtersList: [], editS
 ## TODO (Help wanted)
  - Write additional tests
  - Verify server side rendering
+ - Improve and better organize docs, add examples, add a contributing guide
+ - Development warnings similar to React in dev mode for common mistakes
+
+ Feel free to add anything else I may have missed by opening an issue.
+ We welcome every contribution!
