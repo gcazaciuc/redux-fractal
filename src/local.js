@@ -17,20 +17,20 @@ export default (Config) => (Component) => {
             this.store = null;
             invariant(Config.key,
                 `[redux-fractal] - You must supply a  key to the component either as a function or string`);
-            this.key = compKey;
+            this.compKey = compKey;
             this.unsubscribe = null;
         }
         componentWillMount() {
-            const existingState = this.context.store.getState().local[this.key];
+            const existingState = this.context.store.getState().local[this.compKey];
             const storeResult = createStore(
                 Config.createStore, this.props,
-                this.key, existingState, this.context);
+                this.compKey, existingState, this.context);
             this.store = storeResult.store;
             this.storeCleanup = storeResult.cleanup;
             this.context.store.dispatch({
                 type: UIActions.CREATE_COMPONENT_STATE,
                 payload: { config: Config, props: this.props, store: this.store, hasStore: !!Config.createStore },
-                meta: { reduxFractalTriggerComponent: this.key }
+                meta: { reduxFractalTriggerComponent: this.compKey }
             });
         }
         componentWillUnmount() {
@@ -39,7 +39,7 @@ export default (Config) => (Component) => {
             this.context.store.dispatch({
                 type: UIActions.DESTROY_COMPONENT_STATE,
                 payload: { persist: persist, hasStore: !!Config.createStore },
-                meta: { reduxFractalTriggerComponent: this.key }
+                meta: { reduxFractalTriggerComponent: this.compKey }
             });
             if (this.storeCleanup) {
                 this.storeCleanup();
