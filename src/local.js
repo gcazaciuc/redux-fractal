@@ -3,6 +3,7 @@ import invariant from 'invariant';
 import * as UIActions from './actions.js';
 import { connect } from 'react-redux';
 import { createStore } from './localReducer.js';
+import hoistNonReactStatics from 'hoist-non-react-statics'
 
 export default (Config) => (Component) => {
     const defaultMapStateToProps = (state) => state;
@@ -63,5 +64,7 @@ export default (Config) => (Component) => {
             getState: React.PropTypes.func.isRequired
         })
     });
-    return UI;
+    const displayName = Component.displayName || Component.name || 'Component';
+    UI.displayName = `local(${displayName})`;
+    return hoistNonReactStatics(UI, Component);
 };

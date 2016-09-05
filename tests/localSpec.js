@@ -10,10 +10,21 @@ import createSagaMiddleware from 'redux-saga';
 import { applyMiddleware } from 'redux';
 import { destroyAllComponentsState, destroyComponentState } from '../src/index.js';
 
-const DummyComp = (props) => {
-    return (<div></div>);
-}
+class DummyComp extends React.Component {
+    constructor(props, context) {
+        super(props, context);
+    }
+    render() {
+        return (<div></div>);
+    }
+};
 DummyComp.displayName = 'DummyComp';
+DummyComp.childContextTypes = {
+    color: React.PropTypes.string
+};
+DummyComp.staticFn = () => 'query';
+DummyComp.staticProp = 'staticProp';
+
 class ContextProviderComp extends React.Component {
     constructor(props) {
         super(props);
@@ -537,4 +548,24 @@ test(`Should blow up a single component state or all of the components state`, t
     });
     Store.dispatch(destroyAllComponentsState());
     t.deepEqual(Store.getState().local, {});
+});
+
+test(`Should hoist all non-react statics along with wrapped component contextTypes
+      into the component returned by local`, t => {
+    const Store = configureStore();
+    const HOC = local({
+        key: (props, context) => context.id,
+        createStore: (props, existingState, context) => {
+            return createStore(
+                rootReducer,
+                existingState || { filter: true, sort: context.sortOrder }
+            );
+        },
+        persist: (props, context) => context.keepState
+    });
+    const CompToRender = HOC(DummyComp);
+    t.deepEqual(CompToRender.staticProp, 'staticProp');
+    t.deepEqual(typeof CompToRender.staticFn, 'function');
+    t.deepEqual(CompToRender.displayName, 'local(DummyComp)');
+    // State it's still persisted because 'context' said so
 });
