@@ -9,7 +9,11 @@ export default (Config) => (Component) => {
     const defaultMapStateToProps = (state) => state;
     const ConnectComp = connect(
         Config.mapStateToProps || defaultMapStateToProps,
-        Config.mapDispatchToProps)(Component);
+        Config.mapDispatchToProps)( (props) => {
+            const newProps = Object.assign({}, props);
+            delete newProps.store;
+            return (<Component {...newProps} />);
+        });
     class UI extends React.Component {
         constructor(props, context) {
             super(props, context);
@@ -48,6 +52,10 @@ export default (Config) => (Component) => {
             this.store = null;
         }
         render() {
+            if (this.props.store) {
+                console.warn(`Props named 'store' cannot be passed to redux-fractal 'local'
+                HOC with key ${this.compKey} since it's a reserved prop`);
+            }
             return (
                 this.store && <ConnectComp
                     {...this.props}

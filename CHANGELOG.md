@@ -1,3 +1,7 @@
+## 1.4.1
+    - Fixed a bug preventing composition of `local` HOC with react-redux `connect`
+    - Add `react-redux` as a peer dependency
+    
 ## 1.4
     - Hoist the wrapped component contextTypes into the `local` HOC( thanks @kuon )
     - Hoist all non react statics into the `local` HOC

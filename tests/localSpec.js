@@ -2,7 +2,7 @@ import test from 'ava';
 import { mount } from 'enzyme';
 import React from 'react';
 import local from '../src/local.js';
-import { Provider } from 'react-redux';
+import { Provider, connect } from 'react-redux';
 import { createStore } from 'redux';
 import mySaga from './helpers/sagas.js';
 import { configureStore } from './helpers/configureStore.js';
@@ -567,5 +567,70 @@ test(`Should hoist all non-react statics along with wrapped component contextTyp
     t.deepEqual(CompToRender.staticProp, 'staticProp');
     t.deepEqual(typeof CompToRender.staticFn, 'function');
     t.deepEqual(CompToRender.displayName, 'local(DummyComp)');
-    // State it's still persisted because 'context' said so
+});
+
+test(`Should compose well together with react-redux connect`, t => {
+    const Store = configureStore();
+    const HOC = local({
+        key: (props) => props.id,
+        createStore: (props, existingState) => {
+            return createStore(
+                rootReducer,
+                existingState || { filter: true, sort: props.sortOrder }
+            );
+        },
+        persist: (props) => props.keepState
+    });
+    const mapStateToProps = (state) => ({ isGlobal: state.someGlobalState.isGlobal });
+    const CompToRender = HOC(connect(mapStateToProps)(DummyComp));
+    const wrapper = mount(
+        <Provider store={Store}>
+            <div>
+                <CompToRender sortOrder='none' id={'a'} keepState={true} />
+                <CompToRender sortOrder='none' id={'b'} keepState={true} />
+                <CompToRender sortOrder='none' id={'c'} keepState={true} />
+            </div>
+        </Provider>);
+        const isGlobal = wrapper.find('DummyComp').at(0).props().isGlobal;
+        t.deepEqual(isGlobal, true);
+});
+
+test(`Should compose well together with other local HOCs`, t => {
+    const Store = configureStore();
+    const HOC = local({
+        key: (props) => props.id,
+        createStore: (props, existingState) => {
+            return createStore(
+                rootReducer,
+                existingState || { filter: true, sort: props.sortOrder }
+            );
+        },
+        persist: (props) => props.keepState
+    });
+    const HOC2 = local({
+        key: (props) => props.id2,
+        createStore: (props, existingState) => {
+            return createStore(
+                rootReducer,
+                existingState || { hoc2Prop: props.isHoc2 }
+            );
+        },
+        persist: (props) => props.keepState
+    });
+    const HOC3 = local({
+        key: (props) => props.id
+    });
+    const CompToRender = HOC(HOC2(DummyComp));
+    const wrapper = mount(
+        <Provider store={Store}>
+            <div>
+                <CompToRender sortOrder='asc' id={'a'} id2={'aaa'} isHoc2={true} keepState={true} />
+                <CompToRender sortOrder='none' id={'b'} id2={'bbb'} keepState={true} />
+                <CompToRender sortOrder='none' id={'c'} id2={'ccc'} keepState={true} />
+            </div>
+        </Provider>);
+        const finalProps = wrapper.find('DummyComp').at(0).props();
+        t.deepEqual(finalProps.hoc2Prop, true);
+        t.deepEqual(finalProps.filter, true);
+        t.deepEqual(finalProps.sortOrder, 'asc');
 });
