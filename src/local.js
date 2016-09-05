@@ -55,12 +55,13 @@ export default (Config) => (Component) => {
             );
         }
     }
-    UI.contextTypes = {
+
+    UI.contextTypes = Object.assign({}, Component.contextTypes, {
         store: React.PropTypes.shape({
             subscribe: React.PropTypes.func.isRequired,
             dispatch: React.PropTypes.func.isRequired,
             getState: React.PropTypes.func.isRequired
         })
-    };
+    });
     return UI;
 };
