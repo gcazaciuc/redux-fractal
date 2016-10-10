@@ -322,6 +322,47 @@ test(`Should accept a mapStateToProps and transform the state using it`, t => {
     wrapper.unmount();
 });
 
+test(`Should accept a mergeProps transform props using it`, t => {
+    const Store = configureStore();
+    const CompToRender = local({
+        key: 'myDumbComp',
+        filterGlobalActions: (action) => {
+            return true;
+        },
+        createStore: (props) => {
+            return createStore(
+                rootReducer,
+                { filter: true, sort: props.sortOrder }
+            );
+        },
+        mapStateToProps: (state, ownProps) => ({
+            filter: state.filter,
+            computedProp: ownProps.a+ownProps.b
+        }),
+        mapDispatchToProps:(dispatch) => ({
+            onFilter: (filter) => dispatch({ type: 'SET_FILTER', payload: filter  }),
+            onSort: (sort) => dispatch({ type: 'SET_SORT', payload: sort }),
+        }),
+        mergeProps: (state, dispatch, ownProps) => {
+            return Object.assign({}, ownProps, state, dispatch, {
+                computedProp: state.computedProp + 5
+            })
+        }
+    })(DummyComp);
+    const wrapper = mount(
+        <Provider store={Store}>
+            <CompToRender sortOrder='desc' a={1} b={2} />
+        </Provider>);
+    let filterVal = wrapper.find('DummyComp').props().filter;
+    t.deepEqual(filterVal, true);
+    wrapper.find('DummyComp').props().onFilter('term');
+    wrapper.find('DummyComp').props().onSort('asc');
+    t.deepEqual(wrapper.find('DummyComp').props().filter, 'term');
+    t.deepEqual(wrapper.find('DummyComp').props().sort, undefined);
+    t.deepEqual(wrapper.find('DummyComp').props().computedProp, 8);
+    wrapper.unmount();
+});
+
 test(`Should keep the state after unmount if persist option is set to true and should
       properly reconnect the state when the component is mounted again`, t => {
     const Store = configureStore();
