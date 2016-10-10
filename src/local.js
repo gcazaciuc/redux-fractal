@@ -9,7 +9,8 @@ export default (Config) => (Component) => {
     const defaultMapStateToProps = (state) => state;
     const ConnectComp = connect(
         Config.mapStateToProps || defaultMapStateToProps,
-        Config.mapDispatchToProps)( (props) => {
+        Config.mapDispatchToProps,
+        Config.mergeProps)( (props) => {
             const newProps = Object.assign({}, props);
             delete newProps.store;
             return (<Component {...newProps} />);
