@@ -87,12 +87,12 @@ local({
 })
 ```
 ## Accessing local state and dispatching local actions
-The well know `mapStateToProps` and `mapDispatchToProps` familiar from react-redux `connect` are available having the very same signatures.
+The well know `mapStateToProps`, `mapDispatchToProps`, and `mergeProps` familiar from react-redux `connect` are available having the very same signatures.
 In fact , internally, redux-fractal uses the connect function from 'react-redux' to connect the component to it's private store.
 
 The difference is, that you get only the component's state in `mapStateToProps` as opposed to the entire app state and the `dispatch`
-function in `mapDispatchToProps` dispatches an action tagged with the component key as specified in the HOC config.
-Both `mapStateToProps` and `mapDispatchToProps` are completely optional, define them if you need them.
+function in `mapDispatchToProps` dispatches an action tagged with the component key as specified in the HOC config. `mergeProps`, on the other hand, is no different.
+`mapStateToProps`, `mapDispatchToProps`, and `mergeProps` are completely optional, define them if you need them.
 ### Mapping component state to props
 Beware that the components wrapped in 'local' HOC do not update when global state changes but only when their own state changes. These components are effectively connected to their own private store.
 Of course, you can also connect them to the global store using standard 'connect' function.
@@ -220,6 +220,27 @@ Crazy example: when the sorting from one component changes all dropdowns from an
      }
  })
  ```
+## Merging local state, local dispatch, and own props
+Just like in `connect`, you have the opportunity to transform the final props that are passed into your component using `mergeProps`:
+```
+local({
+    key: 'mycomp',
+    createStore: (props) => createStore(rootReducer, initialState),
+    mapStateToProps: (componentState, ownProps) => {
+        ...
+    },
+    mapDispatchToProps: (localDispatch) =>({
+        onFilter: (term) => localDispatch(updateSearchTerm(term))
+    }),
+    mergeProps: (state, localDispatch, ownProps) =>({
+        {
+            ...ownProps,
+            ...state,
+            ...localDispatch
+        }
+    })
+})
+```
 ## Local middleware
 Since Redux-fractal relies on redux for manging the component state and offers a private store for the component
 you can define middleware for the private component store using the exact same approach as you do when setting up
