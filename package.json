@@ -10,7 +10,7 @@
   "scripts": {
     "build": "rimraf dist && cross-env BABEL_ENV=production && $(npm bin)/babel -d dist src",
     "prepublish": "npm run build",
-    "test-dev": "cross-env BABEL_ENV=development && ava --watch tests/*Spec.js",
+    "test-dev": "cross-env BABEL_ENV=development && cross-env NODE_ENV=development && ava --watch --no-cache tests/*Spec.js",
     "test-dev-coverage": "cross-env BABEL_ENV=development && nyc ava --watch tests/*Spec.js",
     "test": "cross-env BABEL_ENV=development && nyc ava tests/*Spec.js",
     "pretty-coverage": "./node_modules/.bin/nyc report --reporter=html"
@@ -86,7 +86,8 @@
     "react-redux": "^4.4.5",
     "redux": "^3.5.2",
     "redux-saga": "^0.12.0",
-    "rimraf": "^2.5.4"
+    "rimraf": "^2.5.4",
+    "sinon": "^1.17.6"
   },
   "peerDependencies": {
     "react": "^0.14.0 || ^15.0.0-0",

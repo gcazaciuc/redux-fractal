@@ -1,5 +1,6 @@
 import test from 'ava';
 import { mount } from 'enzyme';
+import { spy, useFakeTimers } from 'sinon';
 import React from 'react';
 import local from '../src/local.js';
 import { Provider, connect } from 'react-redux';
@@ -633,4 +634,73 @@ test(`Should compose well together with other local HOCs`, t => {
         t.deepEqual(finalProps.hoc2Prop, true);
         t.deepEqual(finalProps.filter, true);
         t.deepEqual(finalProps.sortOrder, 'asc');
+});
+
+test.skip(`Should not trigger a double dispatch(dispatch while dispatching) when there
+are local HOCS nested and one of the child local unmounts as the result of a parent dispatch`, (t) => {
+    const Store = configureStore();
+    const HOC = local({
+        key: (props) => props.id,
+        createStore: (props, existingState) => {
+            return createStore(
+                (state, action) => state,
+                existingState || { abc: '1' }
+            );
+        }
+    });
+    const HOC2 = local({
+        key: (props) => props.id,
+        filterGlobalActions: (action) => true,
+        createStore: (props, existingState) => {
+            return createStore(
+                (state, action) => {
+                    switch(action.type) {
+                        case 'CLOSE':
+                            return Object.assign({}, state, { isOpen: false });
+                        default:
+                            return state;
+                    }
+                },
+                existingState || { isOpen: true }
+            );
+        },
+        mapDispatchToProps: (dispatch) => ({ 
+            onClose: () => dispatch({ type: 'CLOSE' }) 
+        })
+    });
+    const SFC = (props) => (
+        <button onClick={props.onClose}>Close</button>
+    );
+    SFC.displayName = 'SFC';
+    const FirstComp = HOC(SFC);
+    const SecondComp = HOC2(SFC);
+    const mapStateToProps = (state) => ({
+        isDisplayed: (state.local.b && !state.local.b.isOpen) || true
+    });
+    const mapDispatchToProps = (dispatch) => ({
+        onCloseGlobal: () => dispatch({ type: 'CLOSE' })
+    });
+
+    const ParentComp = connect(mapStateToProps, mapDispatchToProps)( (props) => {
+        return (
+            <div>
+                {<FirstComp id={'a'} /> }
+                {props.isDisplayed ? <SecondComp id={'b'} /> : <SecondComp id={'c'} /> }
+            </div>
+        )
+    });
+    const wrapper = mount(
+        <Provider store={Store}>
+            <ParentComp id='ParentComp' />
+        </Provider>);
+    const secondCompProps = wrapper.find('SFC').at(1).props();
+    t.deepEqual(wrapper.find('SFC').length, 2);
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            // secondCompProps.onClose();
+            wrapper.find('button').at(1).props().onClick();
+            // t.deepEqual(wrapper.find('SFC').length, 1);
+            setTimeout(() => resolve(), 1000);
+        }, 100);
+    });
 });
