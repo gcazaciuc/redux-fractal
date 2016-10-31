@@ -1,7 +1,7 @@
 import React from 'react';
 import invariant from 'invariant';
-import { connect } from 'react-redux';
 import hoistNonReactStatics from 'hoist-non-react-statics';
+import { connect } from 'react-redux';
 import * as UIActions from './actions.js';
 import { createStore } from './localReducer.js';
 
@@ -9,7 +9,8 @@ export default (Config) => (Component) => {
   const defaultMapStateToProps = (state) => state;
   const ConnectComp = connect(
         Config.mapStateToProps || defaultMapStateToProps,
-        Config.mapDispatchToProps)((props) => {
+        Config.mapDispatchToProps,
+        Config.mergeProps)((props) => {
           const newProps = Object.assign({}, props);
           delete newProps.store;
           // eslint-disable-next-line
@@ -22,8 +23,7 @@ export default (Config) => (Component) => {
                 Config.key(props, context) : Config.key;
       this.store = null;
       invariant(Config.key,
-                `[redux-fractal] - You must supply a  
-                key to the component either as a function or string`);
+     '[redux-fractal] - You must supply a  key to the component either as a function or string');
       this.compKey = compKey;
       this.unsubscribe = null;
     }
@@ -36,10 +36,7 @@ export default (Config) => (Component) => {
       this.storeCleanup = storeResult.cleanup;
       this.context.store.dispatch({
         type: UIActions.CREATE_COMPONENT_STATE,
-        payload: { config: Config,
-                   props: this.props,
-                   store: this.store,
-                   hasStore: !!Config.createStore },
+        payload: { config: Config, props: this.props, store: this.store, hasStore: !!Config.createStore },
         meta: { reduxFractalTriggerComponent: this.compKey },
       });
     }
@@ -58,6 +55,7 @@ export default (Config) => (Component) => {
     }
     render() {
       if (this.props.store) {
+        // eslint-disable-next-line
         console.warn(`Props named 'store' cannot be passed to redux-fractal 'local'
                 HOC with key ${this.compKey} since it's a reserved prop`);
       }
@@ -77,13 +75,13 @@ export default (Config) => (Component) => {
       getState: React.PropTypes.func.isRequired,
     }),
   });
-  UI.propTypes = {
+  UI.propTypes = Object.assign({}, {
     store: React.PropTypes.shape({
       subscribe: React.PropTypes.func.isRequired,
       dispatch: React.PropTypes.func.isRequired,
       getState: React.PropTypes.func.isRequired,
     }),
-  };
+  });
   const displayName = Component.displayName || Component.name || 'Component';
   UI.displayName = `local(${displayName})`;
   return hoistNonReactStatics(UI, Component);

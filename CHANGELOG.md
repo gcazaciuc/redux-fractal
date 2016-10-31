@@ -1,3 +1,8 @@
+## 1.5.0
+    - Add support for mergeProps ( thanks @farism )
+    - Cleanup filterGlobalActionscallback upon component unmount
+    - Linting
+
 ## 1.4.1
     - Fixed a bug preventing composition of `local` HOC with react-redux `connect`
     - Add `react-redux` as a peer dependency
