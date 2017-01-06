@@ -43,15 +43,17 @@ export default (Config) => (Component) => {
     componentWillUnmount() {
       const persist = typeof Config.persist === 'function' ?
                                 Config.persist(this.props, this.context) : Config.persist;
-      this.context.store.dispatch({
-        type: UIActions.DESTROY_COMPONENT_STATE,
-        payload: { persist, hasStore: !!Config.createStore },
-        meta: { reduxFractalTriggerComponent: this.compKey },
-      });
-      if (this.storeCleanup) {
-        this.storeCleanup();
-      }
-      this.store = null;
+      setTimeout(() => {
+        this.context.store.dispatch({
+          type: UIActions.DESTROY_COMPONENT_STATE,
+          payload: { persist, hasStore: !!Config.createStore },
+          meta: { reduxFractalTriggerComponent: this.compKey }
+        });
+        if (this.storeCleanup) {
+          this.storeCleanup();
+        }
+        this.store = null;
+      }, 0);
     }
     render() {
       if (this.props.store) {

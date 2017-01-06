@@ -10,9 +10,9 @@
   "scripts": {
     "build": "rimraf dist && cross-env BABEL_ENV=production && $(npm bin)/babel -d dist src",
     "prepublish": "npm run build",
-    "test-dev": "cross-env BABEL_ENV=development && cross-env NODE_ENV=development && ava --watch --no-cache tests/*Spec.js",
-    "test-dev-coverage": "cross-env BABEL_ENV=development && nyc ava --watch tests/*Spec.js",
-    "test": "cross-env BABEL_ENV=development && nyc ava tests/*Spec.js",
+    "test-dev": "cross-env BABEL_ENV=development && cross-env NODE_ENV=development && ava --watch --serial --no-cache tests/*Spec.js",
+    "test-dev-coverage": "cross-env BABEL_ENV=development && nyc ava --serial --watch tests/*Spec.js",
+    "test": "cross-env BABEL_ENV=development && nyc ava --serial tests/*Spec.js",
     "pretty-coverage": "./node_modules/.bin/nyc report --reporter=html"
   },
   "ava": {
