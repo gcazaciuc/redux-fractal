@@ -1,4 +1,4 @@
-## 1.6.1
+## 1.7.1
     - Prevent state from being destroying when components with the same keys
     enter/exit the view(due to destroying being done in a timeout)
 
