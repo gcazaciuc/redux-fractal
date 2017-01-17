@@ -1,3 +1,7 @@
+## 1.6.1
+    - Prevent state from being destroying when components with the same keys
+    enter/exit the view(due to destroying being done in a timeout)
+
 ## 1.5.0
     - Add support for mergeProps ( thanks @farism )
     - Cleanup filterGlobalActionscallback upon component unmount

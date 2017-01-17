@@ -404,7 +404,10 @@ test(`Should keep the state after unmount if persist option is set to true and s
     // The component should be connected to existing state existing of replacing it
     t.deepEqual(sortVal, 'desc');
     wrapper.unmount();
-    return new Promise((resolve) => setTimeout(() => resolve(), 10));
+    return new Promise((resolve) => setTimeout(() => {
+        Store.dispatch(destroyAllComponentsState());
+        resolve();
+    }, 10));
 });
 
 test(`Should be able to control whether the component state is persisted or not
@@ -430,12 +433,11 @@ test(`Should be able to control whether the component state is persisted or not
         </Provider>);
     t.deepEqual(Store.getState().local, {'a': { filter: true, sort: 'desc' }, 'b': {filter: true, sort: 'asc'} });
     wrapper.unmount();
-    setTimeout(() => {
+    return new Promise((resolve) => setTimeout(() => {
         t.deepEqual(Store.getState().local, {'b': {filter: true, sort: 'asc'}});
         Store.dispatch(destroyAllComponentsState());
-    }, 0);
-    // State of b is still there even after unmount
-    return new Promise((resolve) => setTimeout(() => resolve(), 10));
+        resolve();
+    }, 10)); 
 });
 
 test(`Should pass the component context as last argument to callback style configs`, t => {
@@ -469,9 +471,11 @@ test(`Should pass the component context as last argument to callback style confi
     t.deepEqual(Store.getState().local, {'abc': { filter: true, sort: 'asc' } });
     wrapper.unmount();
     // State it's still persisted because 'context' said so
-    t.deepEqual(Store.getState().local, {'abc': { filter: true, sort: 'asc' } });
-    Store.dispatch(destroyAllComponentsState());
-    return new Promise((resolve) => setTimeout(() => resolve(), 10));
+    return new Promise((resolve) => setTimeout(() => {
+        t.deepEqual(Store.getState().local, {'abc': { filter: true, sort: 'asc' } });
+        Store.dispatch(destroyAllComponentsState());
+        resolve();
+    }, 10));
 });
 
 test(`Should re-use the same store if 2 components have the same key`, t => {
@@ -516,9 +520,12 @@ test(`Should re-use the same store if 2 components have the same key`, t => {
     t.deepEqual(Store.getState().local, {'a': { filter: true, sort: 'asc', trigger: 'a', current: 'a' } });
     wrapper.unmount();
     // Should respect the persist the persist setting of the store owner
-    t.deepEqual(Store.getState().local, {'a': { filter: true, sort: 'asc', trigger: 'a', current: 'a' } });
-    Store.dispatch(destroyAllComponentsState());
-    return new Promise((resolve) => setTimeout(() => resolve(), 10));
+    return new Promise((resolve) => setTimeout(() => {
+        t.deepEqual(Store.getState().local, {'a': { filter: true, sort: 'asc', trigger: 'a', current: 'a' } });
+        Store.dispatch(destroyAllComponentsState());
+        t.deepEqual(Store.getState().local, {});
+        resolve();
+    }, 10));
 });
 
 test('Should be able to provide locally scoped middleware', t => {
@@ -595,19 +602,23 @@ test(`Should blow up a single component state or all of the components state`, t
     });
     wrapper.unmount();
     // State it's still persisted because 'context' said so
-    t.deepEqual(Store.getState().local, {
-        'a': { filter: true, sort: 'none' },
-        'b': { filter: true, sort: 'none' },
-        'c': { filter: true, sort: 'none' }
+    return new Promise((resolve) => {;
+        setTimeout(function assert() {
+            t.deepEqual(Store.getState().local, {
+                'a': { filter: true, sort: 'none' },
+                'b': { filter: true, sort: 'none' },
+                'c': { filter: true, sort: 'none' }
+            });
+            Store.dispatch(destroyComponentState('a'));
+            t.deepEqual(Store.getState().local, {
+                'b': { filter: true, sort: 'none' },
+                'c': { filter: true, sort: 'none' }
+            });
+            Store.dispatch(destroyAllComponentsState());
+            t.deepEqual(Store.getState().local, {});
+            resolve();
+        }, 10);
     });
-    Store.dispatch(destroyComponentState('a'));
-    t.deepEqual(Store.getState().local, {
-        'b': { filter: true, sort: 'none' },
-        'c': { filter: true, sort: 'none' }
-    });
-    Store.dispatch(destroyAllComponentsState());
-    t.deepEqual(Store.getState().local, {});
-    return new Promise((resolve) => setTimeout(() => resolve(), 10));
 });
 
 test(`Should hoist all non-react statics along with wrapped component contextTypes
@@ -654,7 +665,11 @@ test(`Should compose well together with react-redux connect`, t => {
         </Provider>);
         const isGlobal = wrapper.find('DummyComp').at(0).props().isGlobal;
         t.deepEqual(isGlobal, true);
-        return new Promise((resolve) => setTimeout(() => resolve(), 10));
+        wrapper.unmount();
+        return new Promise((resolve) => setTimeout(() => {
+            Store.dispatch(destroyAllComponentsState());
+            resolve();
+        }, 10));
 });
 
 test(`Should compose well together with other local HOCs`, t => {
@@ -695,7 +710,11 @@ test(`Should compose well together with other local HOCs`, t => {
         t.deepEqual(finalProps.hoc2Prop, true);
         t.deepEqual(finalProps.filter, true);
         t.deepEqual(finalProps.sortOrder, 'asc');
-        return new Promise((resolve) => setTimeout(() => resolve(), 10));
+        wrapper.unmount();
+        return new Promise((resolve) => setTimeout(() => {
+            Store.dispatch(destroyAllComponentsState());
+            resolve();
+        }, 10));
 });
 
 test.skip(`Should not trigger a double dispatch(dispatch while dispatching) when there

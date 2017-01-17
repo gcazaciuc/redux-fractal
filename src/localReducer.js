@@ -2,19 +2,30 @@ import * as UIActions from './actions.js';
 
 const stores = {};
 const globalActions = {};
+const refCounter = {};
 const defaultGlobalFilter = () => false;
 
 const initialiseComponentState = (state, payload, componentKey) => {
   const { config, store } = payload;
   stores[componentKey] = store;
+  refCounter[componentKey] = refCounter[componentKey] || 0;
+  refCounter[componentKey]++;
   globalActions[componentKey] = config.filterGlobalActions || defaultGlobalFilter;
   const initialState = stores[componentKey].getState();
   const newComponentsState = Object.assign({}, state, { [componentKey]: initialState });
   return newComponentsState;
 };
 const destroyComponentState = (state, payload, componentKey) => {
+  refCounter[componentKey] = refCounter[componentKey] || 0;
+  if (refCounter[componentKey] > 0) {
+    refCounter[componentKey]--;
+  }
+  if (refCounter[componentKey]) {
+    return state;
+  }
   const newState = Object.assign({}, state);
   delete newState[componentKey];
+  delete refCounter[componentKey];
   delete stores[componentKey];
   delete globalActions[componentKey];
   return newState;
@@ -54,7 +65,7 @@ export default (state = {}, action) => {
                 action.payload,
                 componentKey);
     case UIActions.DESTROY_COMPONENT_STATE:
-      if (!action.payload.persist && stores[componentKey] && action.payload.hasStore) {
+      if (!action.payload.persist && stores[componentKey]) {
         return destroyComponentState(state, action.payload, componentKey);
       }
       return state;
