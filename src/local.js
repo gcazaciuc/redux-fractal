@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import invariant from 'invariant';
 import hoistNonReactStatics from 'hoist-non-react-statics';
@@ -71,17 +72,17 @@ export default (Config) => (Component) => {
     }
 
   UI.contextTypes = Object.assign({}, Component.contextTypes, {
-    store: React.PropTypes.shape({
-      subscribe: React.PropTypes.func.isRequired,
-      dispatch: React.PropTypes.func.isRequired,
-      getState: React.PropTypes.func.isRequired,
+    store: PropTypes.shape({
+      subscribe: PropTypes.func.isRequired,
+      dispatch: PropTypes.func.isRequired,
+      getState: PropTypes.func.isRequired,
     }),
   });
   UI.propTypes = Object.assign({}, {
-    store: React.PropTypes.shape({
-      subscribe: React.PropTypes.func.isRequired,
-      dispatch: React.PropTypes.func.isRequired,
-      getState: React.PropTypes.func.isRequired,
+    store: PropTypes.shape({
+      subscribe: PropTypes.func.isRequired,
+      dispatch: PropTypes.func.isRequired,
+      getState: PropTypes.func.isRequired,
     }),
   });
   const displayName = Component.displayName || Component.name || 'Component';
