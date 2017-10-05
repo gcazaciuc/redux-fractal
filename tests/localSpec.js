@@ -1,6 +1,7 @@
 import test from 'ava';
 import { mount } from 'enzyme';
 import { spy, useFakeTimers } from 'sinon';
+import PropTypes from 'prop-types';
 import React from 'react';
 import local from '../src/local.js';
 import { Provider, connect } from 'react-redux';
@@ -18,10 +19,10 @@ class DummyComp extends React.Component {
     render() {
         return (<div></div>);
     }
-};
+}
 DummyComp.displayName = 'DummyComp';
 DummyComp.childContextTypes = {
-    color: React.PropTypes.string
+    color: PropTypes.string
 };
 DummyComp.staticFn = () => 'query';
 DummyComp.staticProp = 'staticProp';
@@ -38,9 +39,9 @@ class ContextProviderComp extends React.Component {
     }
 }
 ContextProviderComp.childContextTypes = {
-     sortOrder: React.PropTypes.string,
-     keepState: React.PropTypes.bool,
-     id: React.PropTypes.string
+     sortOrder: PropTypes.string,
+     keepState: PropTypes.bool,
+     id: PropTypes.string
 };
 const rootReducer = (state = { filter: null, sort: null, trigger: '', current: '' }, action) => {
      switch(action.type) {
@@ -454,9 +455,9 @@ test(`Should pass the component context as last argument to callback style confi
     });
     const CompToRender = HOC(DummyComp);
     CompToRender.contextTypes = Object.assign({}, CompToRender.contextTypes, {
-        sortOrder: React.PropTypes.string,
-        keepState: React.PropTypes.bool,
-        id: React.PropTypes.string
+        sortOrder: PropTypes.string,
+        keepState: PropTypes.bool,
+        id: PropTypes.string
     });
     const wrapper = mount(
         <Provider store={Store}>
